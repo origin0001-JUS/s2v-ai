@@ -1,7 +1,17 @@
 import { create } from 'zustand';
 import type { Scene } from '../types/schema';
 
+type AppPhase = 'topic' | 'plot' | 'editor';
+
 interface ScriptState {
+    // Navigation / Flow State
+    currentPhase: AppPhase;
+    setPhase: (phase: AppPhase) => void;
+
+    // Data State
+    generatedPlots: string[];
+    setGeneratedPlots: (plots: string[]) => void;
+
     scenes: Scene[];
     updateScene: (index: number, updates: Partial<Scene>) => void;
     addScene: () => void;
@@ -27,6 +37,12 @@ const INITIAL_SCENES: Scene[] = [
 ];
 
 export const useScriptStore = create<ScriptState>((set) => ({
+    currentPhase: 'topic', // Start at Topic Input
+    setPhase: (phase) => set({ currentPhase: phase }),
+
+    generatedPlots: [],
+    setGeneratedPlots: (plots) => set({ generatedPlots: plots }),
+
     scenes: INITIAL_SCENES,
 
     updateScene: (index, updates) => set((state) => {

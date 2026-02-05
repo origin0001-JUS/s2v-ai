@@ -3,11 +3,11 @@ import type { ReactNode } from 'react';
 import { BookOpen, Clapperboard, Home, Settings, User } from 'lucide-react';
 
 interface MainLayoutProps {
-    children: ReactNode; // Main Content (Editor)
+    leftPanel: ReactNode; // Main Content (Editor)
     rightPanel: ReactNode; // Right Panel (Preview)
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ children, rightPanel }) => {
+export const MainLayout: React.FC<MainLayoutProps> = ({ leftPanel, rightPanel }) => {
     return (
         <div className="flex h-screen bg-stone-50 overflow-hidden text-stone-800 font-sans">
             {/* 1. Navigation Sidebar (Collapsed) */}
@@ -32,7 +32,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, rightPanel }) 
                 {/* Left: Script / Story Editor */}
                 <section className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-300">
                     <div className="max-w-4xl mx-auto p-8 lg:p-12">
-                        {children}
+                        {leftPanel}
                     </div>
                 </section>
 

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Mic, RefreshCcw, Lock } from 'lucide-react';
 import { GoogleAIService } from '../../services/google_ai';
+import { useScriptStore } from '../../store/useScriptStore';
+import type { Scene } from '../../types/schema';
 
 export const ScriptEditor: React.FC = () => {
+    const { scenes, addScene } = useScriptStore();
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -18,7 +22,6 @@ export const ScriptEditor: React.FC = () => {
             {/* Character Sheet (Consistency) */}
             <div className="flex items-center gap-4 p-5 bg-white border border-stone-200 rounded-2xl shadow-sm">
                 <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-amber-500 shadow-md bg-stone-200">
-                    {/* Placeholder for Character Face */}
                     <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs">No Img</div>
                 </div>
                 <div className="flex-1">
@@ -37,19 +40,19 @@ export const ScriptEditor: React.FC = () => {
 
             {/* Script Rows */}
             <div className="space-y-6">
-                <SceneRow
-                    index={1}
-                    script="어느 맑은 가을 아침, 민수 할아버지는 오래된 사진첩을 꺼내 들었습니다."
-                    prompt="Korean senior man sitting in a sunlit living room, holding an old photo album, warm atmosphere, cinematic lighting"
-                />
-                <SceneRow
-                    index={2}
-                    script="그 사진 속에는 젊은 시절의 자신과, 이제는 곁에 없는 아내의 환한 미소가 담겨 있었습니다."
-                    prompt="Close up shot of an old photograph showing a young korean couple smiling, vintage texture, nostalgic feeling"
-                />
+                {scenes.map((scene, index) => (
+                    <SceneRow
+                        key={scene.id}
+                        index={index}
+                        scene={scene}
+                    />
+                ))}
 
-                {/* New Scene Placeholder */}
-                <div className="border-2 border-dashed border-stone-200 rounded-xl p-6 flex items-center justify-center text-stone-400 hover:border-amber-400 hover:text-amber-500 cursor-pointer transition-all">
+                {/* Add Scene Button */}
+                <div
+                    onClick={addScene}
+                    className="border-2 border-dashed border-stone-200 rounded-xl p-6 flex items-center justify-center text-stone-400 hover:border-amber-400 hover:text-amber-500 cursor-pointer transition-all"
+                >
                     + Add Next Scene
                 </div>
             </div>
@@ -57,15 +60,17 @@ export const ScriptEditor: React.FC = () => {
     );
 };
 
-const SceneRow = ({ index, script, prompt }: { index: number, script: string, prompt: string }) => {
-    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+const SceneRow = ({ index, scene }: { index: number, scene: Scene }) => {
+    const { updateScene, setAudioForScene } = useScriptStore();
     const [isGenerating, setIsGenerating] = useState(false);
 
     const handleTTS = async () => {
+        if (!scene.script) return;
+
         setIsGenerating(true);
-        const result = await GoogleAIService.generateTTS(script);
+        const result = await GoogleAIService.generateTTS(scene.script);
         if (result) {
-            setAudioUrl(result);
+            setAudioForScene(index, result); // Save to Store
             new Audio(result).play();
         } else {
             alert("TTS generation failed. Please check your API Key.");
@@ -76,7 +81,7 @@ const SceneRow = ({ index, script, prompt }: { index: number, script: string, pr
     return (
         <div className="group relative flex gap-6 p-6 bg-white border border-stone-200 rounded-xl hover:border-amber-300 hover:shadow-lg transition-all">
             <div className="absolute -left-3 top-6 w-6 h-6 bg-stone-900 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
-                {index}
+                {index + 1}
             </div>
 
             {/* Script Input */}
@@ -90,12 +95,13 @@ const SceneRow = ({ index, script, prompt }: { index: number, script: string, pr
                         title="Regenerate Audio"
                     >
                         {isGenerating ? <div className="animate-spin text-xs">↻</div> : <Mic className="w-3.5 h-3.5" />}
-                        {audioUrl && <span className="text-xs text-emerald-500 font-bold">Ready</span>}
+                        {scene.audioUrl && <span className="text-xs text-emerald-500 font-bold">Ready</span>}
                     </button>
                 </div>
                 <textarea
                     className="w-full h-32 text-xl font-serif leading-relaxed text-stone-800 bg-transparent border-none resize-none focus:ring-0 p-0 placeholder-stone-300"
-                    defaultValue={script}
+                    value={scene.script}
+                    onChange={(e) => updateScene(index, { script: e.target.value })}
                 />
             </div>
 
@@ -110,7 +116,8 @@ const SceneRow = ({ index, script, prompt }: { index: number, script: string, pr
                     <p className="text-[10px] font-bold text-stone-400 mb-1">PROMPT</p>
                     <textarea
                         className="w-full text-xs text-stone-500 bg-transparent border-none focus:ring-0 p-0 resize-none h-16 leading-relaxed"
-                        defaultValue={prompt}
+                        value={scene.imagePrompt}
+                        onChange={(e) => updateScene(index, { imagePrompt: e.target.value })}
                     />
                 </div>
             </div>

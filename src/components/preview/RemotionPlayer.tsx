@@ -1,19 +1,75 @@
 import React from 'react';
 import { Player } from '@remotion/player';
-// import { Composition } from 'remotion';
+import { Sequence, Audio, AbsoluteFill, Img, useCurrentFrame, interpolate } from 'remotion';
+import { useScriptStore } from '../../store/useScriptStore';
+import type { Scene } from '../../types/schema';
 
-// Import the Root component to reference items if needed, or define composition inline
-// For now, we'll define a simple preview composition closer to the real data later.
+// Component for a single scene
+const SceneSequence: React.FC<{ scene: Scene }> = ({ scene }) => {
+    const frame = useCurrentFrame();
+
+    // Simple fade in effect
+    const opacity = interpolate(frame, [0, 20], [0, 1], {
+        extrapolateRight: "clamp"
+    });
+
+    return (
+        <AbsoluteFill className="bg-stone-50 items-center justify-center">
+            {/* Background Image or Placeholder */}
+            {scene.imageUrl ? (
+                <Img src={scene.imageUrl} className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+                <div className="absolute inset-0 bg-stone-100 flex items-center justify-center text-stone-300">
+                    {scene.imagePrompt ? "Wait for Image Generation..." : "No Image"}
+                </div>
+            )}
+
+            {/* Subtitle / Script Overlay */}
+            <div style={{ opacity }} className="z-10 absolute bottom-20 px-20 text-center w-full">
+                <div className="bg-black/60 p-6 rounded-2xl backdrop-blur-sm">
+                    <p className="text-3xl font-serif text-white leading-relaxed font-medium shadow-black drop-shadow-md">
+                        {scene.script}
+                    </p>
+                </div>
+            </div>
+
+            {/* Audio Track */}
+            {scene.audioUrl && <Audio src={scene.audioUrl} />}
+        </AbsoluteFill>
+    );
+};
+
 
 const PreviewComposition: React.FC = () => {
+    const { scenes } = useScriptStore();
+
+    let currentFrame = 0;
+
     return (
-        <div className="w-full h-full bg-black flex items-center justify-center text-white">
-            <h2 className="text-2xl">Preview Screen</h2>
-        </div>
+        <AbsoluteFill className="bg-black">
+            {scenes.map((scene) => {
+                const startFrame = currentFrame;
+                const duration = scene.durationInFrames;
+                currentFrame += duration;
+
+                return (
+                    <Sequence
+                        key={scene.id}
+                        from={startFrame}
+                        durationInFrames={duration}
+                    >
+                        <SceneSequence scene={scene} />
+                    </Sequence>
+                );
+            })}
+        </AbsoluteFill>
     )
 }
 
 export const RemotionPlayerWrapper: React.FC = () => {
+    const { scenes } = useScriptStore();
+    const totalDuration = scenes.reduce((acc, scene) => acc + scene.durationInFrames, 0);
+
     return (
         <div className="flex flex-col h-full bg-stone-900 text-stone-50">
             {/* Header */}
@@ -26,7 +82,7 @@ export const RemotionPlayerWrapper: React.FC = () => {
                 <div className="aspect-video w-full bg-black shadow-2xl relative">
                     <Player
                         component={PreviewComposition}
-                        durationInFrames={300}
+                        durationInFrames={Math.max(totalDuration, 30)} // Min duration 1 sec
                         compositionWidth={1920}
                         compositionHeight={1080}
                         fps={30}
